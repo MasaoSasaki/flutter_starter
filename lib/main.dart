@@ -1,125 +1,142 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-void main() {
-  runApp(const MyApp());
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_starter/services/connectivity_plus.dart';
+import 'package:flutter_starter/services/firebase/analytics.dart';
+import 'package:flutter_starter/services/firebase/firebase_storage.dart';
+import 'package:flutter_starter/services/firebase/messaging.dart';
+import 'package:flutter_starter/services/firebase/remote_config.dart';
+import 'package:flutter_starter/services/in_app_review.dart';
+import 'package:flutter_starter/services/shared_preferences.dart';
+import 'package:flutter_starter/ui/pages/home.dart';
+import 'package:flutter_starter/utility/logger.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+void main() async {
+  // パッケージの初期化
+  await _initialize();
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+/// MyApp
+class MyApp extends ConsumerWidget with ConnectivityPlus {
+  /// Constructor
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
+      // アプリストアのスクリーンショットを更新する時にバナーを非表示にする
+      // debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+      theme: ThemeData.dark(useMaterial3: true),
+      navigatorObservers: [
+        FirebaseAnalyticsObserver(analytics: AnalyticsInstance().analytics),
+      ],
+      home: Builder(
+        builder: (context) {
+          // 全てのWidgetのビルドが完了後に呼び出される
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!await isOnline()) {
+              await EasyLoading.showError(
+                'ネットワークエラー\n'
+                    '\n'
+                    'インターネットの接続が確認できませんでした。',
+              );
+              return;
+            }
+            // アプリ内設定の読み込み
+            await _loadSettings(context, ref);
+          });
+
+          return const Home();
+        },
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      builder: EasyLoading.init(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+/// アプリ起動時の初期化処理
+Future<void> _initialize() async {
+  Log.initialize();
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  Log.config('App initialize', 'Flutter');
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  // スプラッシュスクリーン表示
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  final String title;
+  // SharedPreferences 初期化
+  Log.config('SharedPreferences initialize', 'SharedPreferences');
+  await SharedPreferencesInstance.initialize();
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  // AdMob 初期化
+  Log.config('AdMob initialize', 'AdMob');
+  await MobileAds.instance.initialize();
+
+  // InAppReview 初期化
+  Log.config('InAppReview initialize', 'InAppReview');
+  await InAppReviewInstance.initialize();
+
+  // Firebase 初期化
+  Log.config('Firebase initialize', 'Firebase');
+  await Firebase.initializeApp(
+    // firebase command で生成された google-services.json のパスを指定
+    // options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Firebase Storage 初期化
+  Log.config('Firebase Storage initialize', 'FirebaseStorage');
+  await FirebaseStorageInstance.initialize();
+
+  // FirebaseRemoteConfig 初期化
+  Log.config('FirebaseRemoteConfig initialize', 'Firebase');
+  await RemoteConfigInstance.initialize();
+
+  // FirebaseAnalytics 初期化
+  Log.config('FirebaseAnalytics initialize', 'FirebaseAnalytics');
+  await AnalyticsInstance.initialize();
+
+  // スプラッシュスクリーン非表示
+  FlutterNativeSplash.remove();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+/// 設定の読み込み
+Future<void> _loadSettings(BuildContext context, WidgetRef ref) async {
+  // ローディング表示
+  await EasyLoading.show(status: '最新の音声データを確認しています。');
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  // Firebase Messaging 初期化
+  Log.config('Firebase Messaging initialize', 'FirebaseMessaging');
+  final messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission();
+  final fcmToken = await messaging.getToken();
+  Log.info('FCM TOKEN: $fcmToken');
+  await FirebaseMessaging.instance.subscribeToTopic('production');
+  if (kDebugMode) {
+    await FirebaseMessaging.instance.subscribeToTopic('development');
+  }
+  FirebaseMessaging.onBackgroundMessage(
+        (message) => handleNotification(message, ref),
+  );
+  // バックグラウンドからフォアグラウンドに戻る際のリスナー設定
+  FirebaseMessaging.onMessageOpenedApp.listen(
+        (message) => handleNotification(message, ref),
+  );
+  // キル状態からフォアグラウンドに戻る際のリスナー設定
+  final message = await FirebaseMessaging.instance.getInitialMessage();
+  if (message != null) {
+    await handleNotification(message, ref);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-  }
+  await EasyLoading.dismiss();
 }

@@ -34,9 +34,38 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
+  connectivity_plus: ^6.0.3
   cupertino_icons: ^1.0.6
+  envied: ^0.5.4+1
+  firebase_analytics: ^11.1.0
+  firebase_core: ^3.1.1
+  firebase_messaging: ^15.0.2
+  firebase_remote_config: ^5.0.2
+  firebase_storage: ^12.1.0
+
+  flutter_app_badger: ^1.5.0
+  flutter_easyloading: ^3.0.5
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+  flutter_riverpod: ^2.5.1
+  font_awesome_flutter: ^10.7.0
+  freezed_annotation: ^2.4.2
+  google_mobile_ads: ^5.1.0
+  intl: ^0.19.0
+  in_app_review: ^2.0.9
+  loading_animation_widget: ^1.2.1
+  logging: ^1.2.0
+  package_info_plus: ^8.0.0
+  pedantic_mono: ^1.27.0
+  riverpod_annotation: ^2.3.5
+  share_plus: ^9.0.0
+  shared_preferences: ^2.2.3
+  url_launcher: ^6.3.0
 
 dev_dependencies:
+  build_runner: ^2.4.11
+  custom_lint: ^0.6.4
+  envied_generator: ^0.5.4+1
   flutter_test:
     sdk: flutter
 
@@ -46,6 +75,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.0
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  riverpod_lint: ^2.3.10
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -88,3 +121,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+#flutter_launcher_icons:
+#  # use Image Asset
+#  # See: https://im0039kp.jp/%E3%80%90flutter%E3%80%91%E3%82%A2%E3%83%80%E3%83%97%E3%83%86%E3%82%A3%E3%83%96%E3%82%A2%E3%82%A4%E3%82%B3%E3%83%B3%E7%94%A8%E3%81%AE%E7%94%BB%E5%83%8F%E3%82%92image-asset-studio%E3%81%8B%E3%82%89/
+#  android: false
+#  ios: true
+#  image_path: "assets/icon/icon.png"
+
+#flutter_native_splash:
+#  color: '#212121'
+#  image: assets/icon/splash.png
+#  android_12:
+#    icon_background_color: '#212121'
